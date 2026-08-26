@@ -249,7 +249,7 @@ body {
 /* ---------- Sticky 100vh Pinned Timeline ---------- */
 .collection-track {
   position: relative;
-  height: 600vh;
+  height: 1200vh;
 }
 
 .timeline-sticky {
@@ -313,7 +313,7 @@ body {
   transition: width 0.04s linear;
 }
 
-/* Elegant 8-Second Reddish Laser Streak */
+/* Elegant 16-Second Reddish Laser Streak */
 .timeline-laser-streak {
   position: absolute;
   top: 50%;
@@ -329,7 +329,7 @@ body {
   box-shadow: 0 0 18px 4px rgba(193, 64, 31, 0.85), 0 0 4px #ffffff;
   border-radius: 2px;
   pointer-events: none;
-  animation: laserStreakZoom 8s infinite cubic-bezier(0.4, 0, 0.2, 1);
+  animation: laserStreakZoom 16s infinite cubic-bezier(0.25, 1, 0.5, 1);
 }
 
 @keyframes laserStreakZoom {
@@ -338,16 +338,16 @@ body {
     width: 0px;
     opacity: 0;
   }
-  3% {
+  2% {
     opacity: 1;
-    width: 220px;
+    width: 240px;
   }
-  45% {
+  50% {
     left: 100%;
-    width: 220px;
+    width: 240px;
     opacity: 1;
   }
-  48% {
+  54% {
     left: 100%;
     width: 0px;
     opacity: 0;

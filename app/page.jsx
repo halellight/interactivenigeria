@@ -178,7 +178,7 @@ export default function HomePage() {
         if (isTimelineVisible && isHorizontalDominant) {
           e.preventDefault();
           const scrollFactor = trackHeight / maxScrollX;
-          const scrollDelta = e.deltaX * scrollFactor * 0.9;
+          const scrollDelta = e.deltaX * scrollFactor * 0.45;
 
           const currentScroll = lenisRef.current ? lenisRef.current.scroll : window.scrollY;
           const targetScroll = Math.max(
@@ -200,7 +200,7 @@ export default function HomePage() {
   }, [activeModalIndex, totalWidth]);
 
   // Drag Interaction
-  const dragRef = useRef({ isDragging: false, startX: 0, initialTargetX: 0, moved: 0 });
+  const dragRef = useRef({ isDragging: false, startX: 0, initialTargetX: 0 });
 
   const handlePointerDown = (e) => {
     if (e.target.closest('.card') || e.target.closest('.search-box') || e.target.closest('.search-pill')) return;
@@ -284,16 +284,14 @@ export default function HomePage() {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [activeModalIndex, searchOpen, totalWidth]);
 
-  // Modal open/close body locks
+  // Modal open/close body locks (retaining stable sticky position on mobile)
   const openModal = (index) => {
     setActiveModalIndex(index);
-    document.body.style.overflow = 'hidden';
     lenisRef.current?.stop();
   };
 
   const closeModal = () => {
     setActiveModalIndex(null);
-    document.body.style.overflow = '';
     lenisRef.current?.start();
   };
 
@@ -530,6 +528,9 @@ export default function HomePage() {
           id="overlay"
           onClick={(e) => {
             if (e.target.id === 'overlay') closeModal();
+          }}
+          onTouchMove={(e) => {
+            if (e.target.id === 'overlay') e.preventDefault();
           }}
           onWheel={(e) => {
             if (e.target.id === 'overlay') {
