@@ -1,4 +1,8 @@
+import { inject } from '@vercel/analytics';
 import { DATA } from './data.js';
+
+// Initialize Vercel Analytics
+inject({ mode: 'production' });
 
 // DOM Elements
 const collectionTrack = document.getElementById('collection');
