@@ -4,7 +4,7 @@
   "type": "module",
   "description": "Nigerian History Museum interactive web app",
   "scripts": {
-    "dev": "node server.js"
+    "dev": "node scripts/dev-server.js"
   },
   "dependencies": {
     "serve": "^14.2.4"
