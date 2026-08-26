@@ -1,12 +1,17 @@
 {
-  "name": "nigerian-history-museum",
-  "version": "1.0.0",
+  "name": "interactivenigeria",
+  "version": "0.1.0",
+  "private": true,
   "type": "module",
-  "description": "Nigerian History Museum interactive web app",
   "scripts": {
-    "dev": "node scripts/dev-server.js"
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start"
   },
   "dependencies": {
-    "serve": "^14.2.4"
+    "next": "^14.2.5",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "lenis": "^1.1.18"
   }
 }

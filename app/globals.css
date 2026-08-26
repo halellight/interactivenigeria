@@ -229,6 +229,7 @@ body {
   padding-bottom: 2px;
   white-space: nowrap;
   transition: all 0.2s ease;
+  cursor: pointer;
 }
 
 .explore:hover {
@@ -312,7 +313,7 @@ body {
   transition: width 0.04s linear;
 }
 
-/* Elegant 8-Second Reddish Laser Streak Zooming Across Entire Line */
+/* Elegant 8-Second Reddish Laser Streak */
 .timeline-laser-streak {
   position: absolute;
   top: 50%;
@@ -564,7 +565,7 @@ body {
   transform: scale(1.06);
 }
 
-/* ---------- Enhanced Rich Context Modal (Matching Screenshot) ---------- */
+/* ---------- Enhanced Rich Context Modal ---------- */
 .overlay {
   position: fixed;
   inset: 0;
