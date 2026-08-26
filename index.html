@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>The Nigeria History Museum</title>
+  <meta name="description" content="A visual history of the kingdoms, uprisings, and inventions that made a nation.">
+  <link rel="icon" type="image/x-icon" href="favicon.ico">
+  <link rel="icon" type="image/png" sizes="32x32" href="favicon.png">
+  <link rel="apple-touch-icon" href="apple-touch-icon.png">
+  <meta property="og:title" content="The Nigeria History Museum">
+  <meta property="og:description" content="A visual history of the kingdoms, uprisings, and inventions that made a nation.">
+  <meta property="og:image" content="og-image.jpg">
+  <meta property="og:type" content="website">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="The Nigeria History Museum">
+  <meta name="twitter:description" content="A visual history of the kingdoms, uprisings, and inventions that made a nation.">
+  <meta name="twitter:image" content="og-image.jpg">
+  <link rel="preconnect" href="https://api.fontshare.com">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://api.fontshare.com/v2/css?f[]=satoshi@400,500,600,700,800,900&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <!-- 100vh Hero Wrapper -->
+  <div class="hero-wrapper" id="top">
+    <header class="topbar">
+      <div class="eyebrow">A living collection of Nigerian history</div>
+      <div>
+        <div class="search-pill" id="searchPill">
+          <span>Search history</span>
+          <kbd>⌘K</kbd>
+        </div>
+        <div class="search-box" id="searchBox">
+          <input id="searchInput" type="text" placeholder="Search history..." autocomplete="off">
+          <span class="close-search" id="closeSearch">esc</span>
+        </div>
+      </div>
+    </header>
+
+    <section class="hero">
+      <h1>
+        <span class="line1">The Nigeria</span>
+        <span class="line2">History Museum</span>
+      </h1>
+      <div class="hero-foot">
+        <p>A visual history of the kingdoms, uprisings, and inventions that made a nation — from the terracotta sculptors of Nok to the tech innovators of Yaba.</p>
+        <a class="explore" href="#collection">Explore the collection <span>↓</span></a>
+      </div>
+    </section>
+  </div>
+
+  <!-- Sticky 100vh Horizontal Timeline Section -->
+  <div class="collection-track" id="collection">
+    <div class="timeline-sticky" id="timelineSticky">
+      <div class="timeline-viewport">
+        <div class="timeline-inner" id="timelineInner">
+          <div class="timeline-line">
+            <div class="timeline-line-progress" id="timelineProgress">
+              <div class="timeline-pulse-head"></div>
+            </div>
+            <!-- Reddish laser streak zooming across every 8 seconds -->
+            <div class="timeline-laser-streak"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Black Footer -->
+  <footer>
+    <div class="disclaimer">
+      An independent visual archive. Not affiliated with the Federal Government of Nigeria.
+    </div>
+    <div class="attribution">
+      Built by <a href="https://x.com/__Halel" target="_blank" rel="noopener noreferrer" class="author-link"><strong>Praise Ibe</strong></a><br>
+      © 2026
+    </div>
+  </footer>
+
+  <!-- Rich Context Modal Dialog (with data-lenis-prevent to enable effortless wheel scrolling) -->
+  <div class="overlay" id="overlay" data-lenis-prevent>
+    <div class="modal" id="modalContainer" data-lenis-prevent>
+      <div class="modal-top">
+        <div class="crumb" id="modalCrumb"></div>
+        <div class="modal-close" id="modalClose">Close ✕</div>
+      </div>
+
+      <div class="modal-visual">
+        <img id="modalImg" src="" alt="">
+      </div>
+
+      <div class="modal-body">
+        <!-- Hero Split -->
+        <div class="modal-hero-split">
+          <div class="modal-hero-left">
+            <p class="source" id="modalSource"></p>
+            <h2 id="modalTitle"></h2>
+            <p class="tagline" id="modalTag"></p>
+          </div>
+          <div class="modal-hero-right">
+            <p class="headline-text" id="modalHeadline"></p>
+          </div>
+        </div>
+
+        <!-- Structured Context Rows -->
+        <div class="modal-context-rows">
+          <div class="modal-context-row">
+            <div class="label">What happened</div>
+            <div class="value" id="modalWhatHappened"></div>
+          </div>
+          <div class="modal-context-row">
+            <div class="label">Why it mattered</div>
+            <div class="value" id="modalWhyItMattered"></div>
+          </div>
+          <div class="modal-context-row">
+            <div class="label">Historical lineage</div>
+            <div class="value" id="modalLineage"></div>
+          </div>
+        </div>
+
+        <!-- Bottom Metadata Grid -->
+        <div class="modal-meta-grid">
+          <div class="meta-col-left">
+            <div class="meta-field">
+              <span class="meta-label">Period</span>
+              <span class="meta-val" id="modalPeriod"></span>
+            </div>
+            <div class="meta-field">
+              <span class="meta-label">Geography</span>
+              <span class="meta-val" id="modalLocation"></span>
+            </div>
+          </div>
+
+          <div class="meta-col-right">
+            <div class="sources-heading">Original material / Sources</div>
+            <div id="modalSourcesList"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Lenis Smooth Scroll Engine -->
+  <script src="https://unpkg.com/lenis@1.1.18/dist/lenis.min.js"></script>
+  <script type="module" src="app.js"></script>
+</body>
+</html>

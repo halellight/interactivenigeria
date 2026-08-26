@@ -1,0 +1,13 @@
+{
+  "name": "nigerian-history-museum",
+  "version": "1.0.0",
+  "type": "module",
+  "description": "Nigerian History Museum interactive web app",
+  "scripts": {
+    "dev": "node server.js",
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "serve": "^14.2.4"
+  }
+}
