@@ -575,7 +575,7 @@ body {
   display: none;
   align-items: center;
   justify-content: center;
-  z-index: 100;
+  z-index: 99999;
   padding: 24px;
   opacity: 0;
   transition: opacity 0.25s ease;

@@ -203,12 +203,11 @@ export default function HomePage() {
   const dragRef = useRef({ isDragging: false, startX: 0, initialTargetX: 0, moved: 0 });
 
   const handlePointerDown = (e) => {
-    if (e.target.closest('.search-box') || e.target.closest('.search-pill')) return;
+    if (e.target.closest('.card') || e.target.closest('.search-box') || e.target.closest('.search-pill')) return;
     dragRef.current = {
       isDragging: true,
       startX: e.clientX,
-      initialTargetX: 0,
-      moved: 0
+      initialTargetX: 0
     };
     setIsGrabbing(true);
     try {
@@ -219,7 +218,6 @@ export default function HomePage() {
   const handlePointerMove = (e) => {
     if (!dragRef.current.isDragging || !collectionTrackRef.current) return;
     const deltaX = e.clientX - dragRef.current.startX;
-    dragRef.current.moved += Math.abs(deltaX);
 
     const trackTop = collectionTrackRef.current.offsetTop;
     const trackHeight = collectionTrackRef.current.offsetHeight - window.innerHeight;
@@ -244,9 +242,6 @@ export default function HomePage() {
       try {
         if (e.pointerId) e.currentTarget.releasePointerCapture(e.pointerId);
       } catch (err) {}
-      setTimeout(() => {
-        dragRef.current.moved = 0;
-      }, 50);
     }
   };
 
@@ -291,7 +286,6 @@ export default function HomePage() {
 
   // Modal open/close body locks
   const openModal = (index) => {
-    if (dragRef.current.moved > 8) return;
     setActiveModalIndex(index);
     document.body.style.overflow = 'hidden';
     lenisRef.current?.stop();
