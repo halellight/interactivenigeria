@@ -415,12 +415,14 @@ body {
   transition: color 0.3s ease;
 }
 
-.tick:hover .yeartag .year-num {
+.tick:hover .yeartag .year-num,
+.tick.is-active .yeartag .year-num {
   color: rgba(0, 0, 0, 0.08);
   -webkit-text-stroke-color: rgba(0, 0, 0, 0.28);
 }
 
-.tick:hover .yeartag .period-sub {
+.tick:hover .yeartag .period-sub,
+.tick.is-active .yeartag .period-sub {
   color: var(--red);
 }
 
@@ -442,7 +444,8 @@ body {
 .tick .stem.stem-below { transform-origin: top center; }
 .tick .stem.stem-above { transform-origin: bottom center; }
 
-.tick:hover .stem {
+.tick:hover .stem,
+.tick.is-active .stem {
   background: var(--ink);
 }
 
@@ -468,7 +471,8 @@ body {
   transform: translate(-50%, -50%) scale(1.15);
 }
 
-.tick:hover .dot {
+.tick:hover .dot,
+.tick.is-active .dot {
   transform: translate(-50%, -50%) scale(1.5) !important;
   background: var(--red);
   border-color: var(--red);
@@ -493,10 +497,16 @@ body {
   will-change: transform, opacity;
 }
 
-.card:hover {
+.card:hover,
+.tick.is-active .card {
   box-shadow: var(--shadow-hover) !important;
   border-color: rgba(0, 0, 0, 0.35) !important;
   z-index: 15;
+}
+
+.card:hover .visual img,
+.tick.is-active .card .visual img {
+  transform: scale(1.06);
 }
 
 .card.dim {
@@ -896,6 +906,20 @@ footer .attribution .author-link:hover {
   }
   .tick .yeartag .period-sub {
     font-size: 0.62rem;
+  }
+  .tick.is-active .yeartag .year-num {
+    color: rgba(0, 0, 0, 0.12);
+    -webkit-text-stroke: 1.2px rgba(0, 0, 0, 0.38);
+    transform: scale(1.04);
+    transition: transform 0.3s var(--ease-smooth), color 0.3s ease, -webkit-text-stroke 0.3s ease;
+  }
+  .tick.is-active .yeartag .period-sub {
+    color: var(--red);
+    font-weight: 700;
+  }
+  .tick.is-active .card {
+    border-color: rgba(0, 0, 0, 0.28) !important;
+    box-shadow: 0 16px 36px rgba(0, 0, 0, 0.14), 0 4px 10px rgba(0, 0, 0, 0.06) !important;
   }
   .modal-hero-split,
   .modal-meta-grid {

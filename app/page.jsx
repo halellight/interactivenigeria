@@ -117,10 +117,22 @@ export default function HomePage() {
         timelineInnerRef.current.style.transform = `translate3d(${-currentX}px, -50%, 0)`;
 
         const winW = window.innerWidth;
+        const isMobile = winW <= 820 || (typeof window !== 'undefined' && ('ontouchstart' in window || (navigator.maxTouchPoints && navigator.maxTouchPoints > 0)));
+
+        let closestIdx = -1;
+        let minDistance = Infinity;
+
         cardElementsRef.current.forEach((el, idx) => {
           if (!el || !el.card || !el.stem || !el.yeartag) return;
           const { left, above } = indexedData[idx];
           const screenX = left - currentX;
+
+          const distFromCenter = Math.abs(screenX - (winW / 2));
+          if (distFromCenter < minDistance) {
+            minDistance = distFromCenter;
+            closestIdx = idx;
+          }
+
           const entryProgress = Math.max(0, Math.min(1, (winW + 120 - screenX) / 360));
           const exitProgress = Math.max(0, Math.min(1, (screenX + 260) / 360));
           const visibility = smoothstep(0, 1, Math.min(entryProgress, exitProgress));
@@ -142,6 +154,13 @@ export default function HomePage() {
             el.card.style.opacity = '0';
             el.stem.style.transform = 'scaleY(0)';
             el.yeartag.style.opacity = '0';
+          }
+        });
+
+        cardElementsRef.current.forEach((el, idx) => {
+          if (el && el.tick) {
+            const isActive = isMobile && idx === closestIdx && minDistance < Math.min(260, winW * 0.55);
+            el.tick.classList.toggle('is-active', isActive);
           }
         });
       }
