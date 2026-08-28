@@ -1,11 +1,36 @@
 'use client';
 
 import { useEffect, useRef, useState, useMemo } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import Lenis from 'lenis';
 import { DATA } from './data';
 
 const SPACING = 320;
 const SIDE_PAD = 260;
+
+// Curated priority order for popular historical items in search
+const POPULAR_TITLES_ORDER = [
+  'Independence Day',
+  'The Benin Empire',
+  'Nok Terracottas',
+  'Aba Women’s War',
+  "Aba Women's War",
+  'The Sack of Benin',
+  'Igbo-Ukwu Bronzes',
+  'The Amalgamation',
+  'FESTAC ’77',
+  "FESTAC '77",
+  'The Nigerian Civil War',
+  'Ife Bronzes',
+  'Kanem-Borno Empire',
+  'Sokoto Caliphate',
+  'Annexation of Lagos',
+  'Berlin Conference',
+  'Oil Boom Era',
+  'Nollywood Emerges',
+  'Lekki Free Zone & Port',
+  'Fourth Republic Begins'
+];
 
 function smoothstep(min, max, value) {
   const x = Math.max(0, Math.min(1, (value - min) / (max - min)));
@@ -16,6 +41,7 @@ export default function HomePage() {
   const [activeModalIndex, setActiveModalIndex] = useState(null);
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [selectedSearchIdx, setSelectedSearchIdx] = useState(0);
   const [isGrabbing, setIsGrabbing] = useState(false);
 
   const lenisRef = useRef(null);
@@ -24,11 +50,12 @@ export default function HomePage() {
   const timelineInnerRef = useRef(null);
   const timelineProgressRef = useRef(null);
   const searchInputRef = useRef(null);
+  const searchResultsListRef = useRef(null);
   const cardElementsRef = useRef([]);
 
   const totalWidth = useMemo(() => DATA.length * SPACING + SIDE_PAD * 2, []);
 
-  // Search indexing
+  // Search indexing & layout coordinate prep
   const indexedData = useMemo(() => {
     return DATA.map((item, index) => {
       const searchCorpus = [
@@ -44,16 +71,56 @@ export default function HomePage() {
         item.whyItMattered
       ].filter(Boolean).join(' ').toLowerCase();
 
+      // Flexible matching for popular rank
+      const normalizedTitle = item.title.toLowerCase().replace(/['’]/g, "'");
+      let popularRank = POPULAR_TITLES_ORDER.findIndex(
+        (p) => p.toLowerCase().replace(/['’]/g, "'") === normalizedTitle
+      );
+      if (popularRank === -1) popularRank = 100 + index;
+
       return {
         ...item,
         index,
         left: SIDE_PAD + index * SPACING,
         above: index % 2 === 0,
         stemLen: 58 + (index % 2) * 16,
-        searchCorpus
+        searchCorpus,
+        popularRank
       };
     });
   }, []);
+
+  // Filtered & ranked search items
+  const filteredSearchItems = useMemo(() => {
+    const q = searchQuery.trim().toLowerCase();
+    if (!q) {
+      return [...indexedData].sort((a, b) => a.popularRank - b.popularRank);
+    }
+    return indexedData
+      .filter((item) => item.searchCorpus.includes(q))
+      .sort((a, b) => {
+        const aTitle = a.title.toLowerCase();
+        const bTitle = b.title.toLowerCase();
+        if (aTitle.includes(q) && !bTitle.includes(q)) return -1;
+        if (!aTitle.includes(q) && bTitle.includes(q)) return 1;
+        return a.popularRank - b.popularRank;
+      });
+  }, [indexedData, searchQuery]);
+
+  // Reset search selection index when query changes
+  useEffect(() => {
+    setSelectedSearchIdx(0);
+  }, [searchQuery]);
+
+  // Scroll active item into view inside search list
+  useEffect(() => {
+    if (searchResultsListRef.current && searchOpen) {
+      const activeEl = searchResultsListRef.current.children[selectedSearchIdx];
+      if (activeEl) {
+        activeEl.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+      }
+    }
+  }, [selectedSearchIdx, searchOpen]);
 
   const activeItem = activeModalIndex !== null ? DATA[activeModalIndex] : null;
 
@@ -179,7 +246,7 @@ export default function HomePage() {
   // Trackpad Horizontal Swipe Navigation
   useEffect(() => {
     const handleWheel = (e) => {
-      if (activeModalIndex !== null) return;
+      if (activeModalIndex !== null || searchOpen) return;
       if (!collectionTrackRef.current) return;
 
       const rect = collectionTrackRef.current.getBoundingClientRect();
@@ -216,13 +283,13 @@ export default function HomePage() {
 
     window.addEventListener('wheel', handleWheel, { passive: false });
     return () => window.removeEventListener('wheel', handleWheel);
-  }, [activeModalIndex, totalWidth]);
+  }, [activeModalIndex, searchOpen, totalWidth]);
 
   // Drag Interaction
   const dragRef = useRef({ isDragging: false, startX: 0, initialTargetX: 0 });
 
   const handlePointerDown = (e) => {
-    if (e.target.closest('.card') || e.target.closest('.search-box') || e.target.closest('.search-pill')) return;
+    if (e.target.closest('.card') || e.target.closest('.search-pill') || e.target.closest('.spotlight-overlay')) return;
     dragRef.current = {
       isDragging: true,
       startX: e.clientX,
@@ -264,19 +331,105 @@ export default function HomePage() {
     }
   };
 
-  // Keyboard Shortcuts
+  // Scroll timeline to an item's position
+  const scrollToItem = (index) => {
+    const item = indexedData[index];
+    if (item && collectionTrackRef.current) {
+      const maxScrollX = Math.max(0, totalWidth - window.innerWidth);
+      const targetLeft = item.left - (window.innerWidth / 2) + 145;
+      const boundedLeft = Math.max(0, Math.min(maxScrollX, targetLeft));
+      const trackTop = collectionTrackRef.current.offsetTop;
+      const trackHeight = collectionTrackRef.current.offsetHeight - window.innerHeight;
+      const progress = boundedLeft / maxScrollX;
+      const targetScrollY = trackTop + (progress * trackHeight);
+
+      if (lenisRef.current) {
+        lenisRef.current.scrollTo(targetScrollY);
+      } else {
+        window.scrollTo({ top: targetScrollY, behavior: 'smooth' });
+      }
+    }
+  };
+
+  // Modal open/close actions
+  const openModal = (index) => {
+    setActiveModalIndex(index);
+    lenisRef.current?.stop();
+  };
+
+  const closeModal = () => {
+    setActiveModalIndex(null);
+    lenisRef.current?.start();
+  };
+
+  // Open & Close search modal
+  const openSearch = () => {
+    setSearchOpen(true);
+    setSelectedSearchIdx(0);
+    lenisRef.current?.stop();
+    setTimeout(() => {
+      if (searchInputRef.current) {
+        searchInputRef.current.focus();
+      }
+    }, 60);
+  };
+
+  const closeSearch = () => {
+    setSearchOpen(false);
+    setSearchQuery('');
+    if (activeModalIndex === null) {
+      lenisRef.current?.start();
+    }
+  };
+
+  const handleSelectSearchResult = (item) => {
+    closeSearch();
+    scrollToItem(item.index);
+    openModal(item.index);
+  };
+
+  // Keyboard Navigation & Shortcuts
   useEffect(() => {
     const handleKeyDown = (e) => {
       if (e.key === 'Escape') {
-        setActiveModalIndex(null);
-        setSearchOpen(false);
-        setSearchQuery('');
+        if (searchOpen) {
+          closeSearch();
+        } else if (activeModalIndex !== null) {
+          closeModal();
+        }
       }
-      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
+
+      // Cmd+K or Ctrl+K or '/' to trigger search modal
+      if (
+        ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') ||
+        (e.key === '/' && activeModalIndex === null && !searchOpen && document.activeElement?.tagName !== 'INPUT')
+      ) {
         e.preventDefault();
-        setSearchOpen(true);
-        setTimeout(() => searchInputRef.current?.focus(), 50);
+        if (searchOpen) {
+          closeSearch();
+        } else {
+          openSearch();
+        }
       }
+
+      // Spotlight search arrow navigation & enter
+      if (searchOpen) {
+        if (e.key === 'ArrowDown') {
+          e.preventDefault();
+          setSelectedSearchIdx((prev) => (prev + 1 < filteredSearchItems.length ? prev + 1 : prev));
+        } else if (e.key === 'ArrowUp') {
+          e.preventDefault();
+          setSelectedSearchIdx((prev) => (prev - 1 >= 0 ? prev - 1 : 0));
+        } else if (e.key === 'Enter') {
+          e.preventDefault();
+          if (filteredSearchItems.length > 0 && selectedSearchIdx < filteredSearchItems.length) {
+            handleSelectSearchResult(filteredSearchItems[selectedSearchIdx]);
+          }
+        }
+        return;
+      }
+
+      // Timeline arrow keys
       if (e.key === 'ArrowRight' && activeModalIndex === null && !searchOpen && collectionTrackRef.current) {
         e.preventDefault();
         const trackTop = collectionTrackRef.current.offsetTop;
@@ -301,53 +454,7 @@ export default function HomePage() {
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [activeModalIndex, searchOpen, totalWidth]);
-
-  // Modal open/close body locks (retaining stable sticky position on mobile)
-  const openModal = (index) => {
-    setActiveModalIndex(index);
-    lenisRef.current?.stop();
-  };
-
-  const closeModal = () => {
-    setActiveModalIndex(null);
-    lenisRef.current?.start();
-  };
-
-  // Search Filter Handler
-  const handleSearchChange = (val) => {
-    setSearchQuery(val);
-    const q = val.trim().toLowerCase();
-    if (!q) return;
-
-    const firstMatch = indexedData.find(item => item.searchCorpus.includes(q));
-    if (firstMatch && collectionTrackRef.current) {
-      const maxScrollX = Math.max(0, totalWidth - window.innerWidth);
-      const targetLeft = firstMatch.left - (window.innerWidth / 2) + 145;
-      const boundedLeft = Math.max(0, Math.min(maxScrollX, targetLeft));
-      const trackTop = collectionTrackRef.current.offsetTop;
-      const trackHeight = collectionTrackRef.current.offsetHeight - window.innerHeight;
-      const progress = boundedLeft / maxScrollX;
-      const targetScrollY = trackTop + (progress * trackHeight);
-
-      if (lenisRef.current) {
-        lenisRef.current.scrollTo(targetScrollY);
-      } else {
-        window.scrollTo({ top: targetScrollY, behavior: 'smooth' });
-      }
-    }
-  };
-
-  const handleSearchKeyDown = (e) => {
-    if (e.key === 'Enter') {
-      e.preventDefault();
-      const q = searchQuery.trim().toLowerCase();
-      const firstMatch = indexedData.find(item => !q || item.searchCorpus.includes(q));
-      if (firstMatch) {
-        openModal(firstMatch.index);
-      }
-    }
-  };
+  }, [activeModalIndex, searchOpen, filteredSearchItems, selectedSearchIdx, totalWidth]);
 
   const handleExploreClick = (e) => {
     e.preventDefault();
@@ -357,8 +464,6 @@ export default function HomePage() {
     }
   };
 
-  const q = searchQuery.trim().toLowerCase();
-
   return (
     <>
       {/* 100vh Hero Wrapper */}
@@ -366,42 +471,21 @@ export default function HomePage() {
         <header className="topbar">
           <div className="eyebrow">A living collection of Nigerian history</div>
           <div>
-            {!searchOpen ? (
-              <div 
-                className="search-pill" 
-                id="searchPill" 
-                onClick={() => {
-                  setSearchOpen(true);
-                  setTimeout(() => searchInputRef.current?.focus(), 50);
-                }}
-              >
-                <span>Search history</span>
-                <kbd>⌘K</kbd>
-              </div>
-            ) : (
-              <div className="search-box active" id="searchBox">
-                <input 
-                  ref={searchInputRef}
-                  id="searchInput" 
-                  type="text" 
-                  placeholder="Search history..." 
-                  value={searchQuery}
-                  onChange={(e) => handleSearchChange(e.target.value)}
-                  onKeyDown={handleSearchKeyDown}
-                  autoComplete="off" 
-                />
-                <span 
-                  className="close-search" 
-                  id="closeSearch"
-                  onClick={() => {
-                    setSearchOpen(false);
-                    setSearchQuery('');
-                  }}
-                >
-                  esc
-                </span>
-              </div>
-            )}
+            <div 
+              className="search-pill" 
+              id="searchPill" 
+              onClick={openSearch}
+              role="button"
+              tabIndex={0}
+              aria-label="Open search dialog"
+            >
+              <svg className="search-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="11" cy="11" r="8"></circle>
+                <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+              </svg>
+              <span>Search history</span>
+              <kbd>⌘K</kbd>
+            </div>
           </div>
         </header>
 
@@ -445,7 +529,6 @@ export default function HomePage() {
               </div>
 
               {indexedData.map((item, i) => {
-                const isDimmed = q && !item.searchCorpus.includes(q);
                 return (
                   <div 
                     key={item.title + item.year}
@@ -480,7 +563,7 @@ export default function HomePage() {
                     <div className="dot" />
 
                     <div 
-                      className={`card ${item.above ? 'above' : 'below'} ${isDimmed ? 'dim' : ''}`}
+                      className={`card ${item.above ? 'above' : 'below'}`}
                       style={{ top: item.above ? `${-(item.stemLen + 246)}px` : `${item.stemLen}px` }}
                       onClick={(e) => {
                         e.stopPropagation();
@@ -490,9 +573,15 @@ export default function HomePage() {
                         const rect = e.currentTarget.getBoundingClientRect();
                         const x = e.clientX - rect.left - rect.width / 2;
                         const y = e.clientY - rect.top - rect.height / 2;
-                        const rotX = -(y / (rect.height / 2)) * 6;
-                        const rotY = (x / (rect.width / 2)) * 6;
+                        const rotX = -(y / (rect.height / 2)) * 7;
+                        const rotY = (x / (rect.width / 2)) * 7;
                         e.currentTarget.style.transform = `translateX(-50%) translateY(-6px) perspective(600px) rotateX(${rotX.toFixed(2)}deg) rotateY(${rotY.toFixed(2)}deg) scale(1.03)`;
+                      }}
+                      onMouseDown={(e) => {
+                        e.currentTarget.style.transform = `translateX(-50%) translateY(-2px) scale(0.97)`;
+                      }}
+                      onMouseUp={(e) => {
+                        e.currentTarget.style.transform = '';
                       }}
                       onMouseLeave={(e) => {
                         e.currentTarget.style.transform = '';
@@ -540,112 +629,280 @@ export default function HomePage() {
         </div>
       </footer>
 
-      {/* Rich Context Modal Dialog */}
-      {activeItem && (
-        <div 
-          className="overlay active" 
-          id="overlay"
-          onClick={(e) => {
-            if (e.target.id === 'overlay') closeModal();
-          }}
-          onTouchMove={(e) => {
-            if (e.target.id === 'overlay') e.preventDefault();
-          }}
-          onWheel={(e) => {
-            if (e.target.id === 'overlay') {
-              e.preventDefault();
-              const container = document.getElementById('modalContainer');
-              if (container) container.scrollTop += e.deltaY;
-            }
-          }}
-        >
-          <div className="modal" id="modalContainer" data-lenis-prevent>
-            <div className="modal-top">
-              <div className="crumb">{`${activeItem.year} / ${activeItem.title}`}</div>
-              <div className="modal-close" onClick={closeModal}>Close ✕</div>
-            </div>
+      {/* Spotlight Command-Palette Search Modal */}
+      <AnimatePresence>
+        {searchOpen && (
+          <motion.div 
+            className="spotlight-overlay" 
+            id="spotlightOverlay"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.18, ease: 'easeOut' }}
+            onClick={(e) => {
+              if (e.target.id === 'spotlightOverlay') closeSearch();
+            }}
+            onWheel={(e) => {
+              e.stopPropagation();
+            }}
+          >
+            <motion.div 
+              className="spotlight-modal"
+              data-lenis-prevent
+              initial={{ opacity: 0, scale: 0.94, y: -16 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: -10 }}
+              transition={{ type: 'spring', damping: 28, stiffness: 350 }}
+              onClick={(e) => e.stopPropagation()}
+              onWheel={(e) => {
+                e.stopPropagation();
+              }}
+            >
+              {/* Search Top Input */}
+              <div className="spotlight-header">
+                <div className="spotlight-input-wrap">
+                  <svg className="spotlight-search-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                    <circle cx="11" cy="11" r="8"></circle>
+                    <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                  </svg>
+                  <input 
+                    ref={searchInputRef}
+                    type="text" 
+                    className="spotlight-input"
+                    placeholder="Search interfaces, eras, stories, or artifacts..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    autoComplete="off"
+                    spellCheck="false"
+                  />
+                </div>
+                <button 
+                  type="button" 
+                  className="spotlight-esc-btn" 
+                  onClick={closeSearch}
+                  aria-label="Close search"
+                >
+                  Esc
+                </button>
+              </div>
 
-            <div className="modal-visual">
-              <img 
-                src={activeItem.image} 
-                alt={activeItem.title}
-                onError={(e) => {
-                  e.currentTarget.onerror = null;
-                  e.currentTarget.src = activeItem.fallback || '/og-image.jpg';
+              {/* Subheader bar */}
+              <div className="spotlight-subhead">
+                <span className="subhead-title">
+                  {searchQuery ? `Search results for "${searchQuery}"` : 'Popular artifacts & stories'}
+                </span>
+                <span className="subhead-count mono">
+                  {filteredSearchItems.length} {filteredSearchItems.length === 1 ? 'artifact' : 'artifacts'}
+                </span>
+              </div>
+
+              {/* Scrollable Results List */}
+              <div 
+                className="spotlight-list" 
+                ref={searchResultsListRef}
+                data-lenis-prevent
+                onWheel={(e) => {
+                  e.stopPropagation();
                 }}
-              />
-            </div>
+              >
+                {filteredSearchItems.length > 0 ? (
+                  filteredSearchItems.map((item, idx) => {
+                    const isSelected = idx === selectedSearchIdx;
+                    return (
+                      <div 
+                        key={item.title + item.year}
+                        className={`spotlight-item ${isSelected ? 'is-active' : ''}`}
+                        onMouseEnter={() => setSelectedSearchIdx(idx)}
+                        onClick={() => handleSelectSearchResult(item)}
+                      >
+                        <div className="spotlight-date mono">
+                          {item.year}
+                        </div>
 
-            <div className="modal-body">
-              <div className="modal-hero-split">
-                <div className="modal-hero-left">
-                  <p className="source">{activeItem.source}</p>
-                  <h2>{activeItem.title}</h2>
-                  <p className="tagline">{activeItem.tag}</p>
-                </div>
-                <div className="modal-hero-right">
-                  <p className="headline-text">{activeItem.headline || activeItem.blurb}</p>
-                </div>
+                        <div className="spotlight-main">
+                          <strong className="spotlight-title">{item.title}</strong>
+                          <span className="spotlight-subtitle">{item.tag || item.headline}</span>
+                        </div>
+
+                        <div className="spotlight-meta">
+                          <span className="spotlight-category">
+                            {item.period || item.epoch || 'History'} · {item.location?.split(',')[0]?.split('&')[0]?.trim() || 'Nigeria'}
+                          </span>
+                          <span className="spotlight-arrow">↗</span>
+                        </div>
+                      </div>
+                    );
+                  })
+                ) : (
+                  <div className="spotlight-empty">
+                    <p>No historical artifacts found for &ldquo;{searchQuery}&rdquo;</p>
+                    <small>Try searching for &ldquo;1960&rdquo;, &ldquo;Benin&rdquo;, &ldquo;Nok&rdquo;, &ldquo;Aba&rdquo;, or &ldquo;Lagos&rdquo;</small>
+                  </div>
+                )}
               </div>
 
-              <div className="modal-context-rows">
-                <div className="modal-context-row">
-                  <div className="label">What happened</div>
-                  <div className="value">{activeItem.whatHappened || activeItem.blurb}</div>
-                </div>
-                <div className="modal-context-row">
-                  <div className="label">Why it mattered</div>
-                  <div className="value">{activeItem.whyItMattered || "A transformative milestone that permanently altered the trajectory of the nation."}</div>
-                </div>
-                <div className="modal-context-row">
-                  <div className="label">Historical lineage</div>
-                  <div className="value">{activeItem.lineage || `${activeItem.title} → Modern Republic`}</div>
-                </div>
-              </div>
-
-              <div className="modal-meta-grid">
-                <div className="meta-col-left">
-                  <div className="meta-field">
-                    <span className="meta-label">Period</span>
-                    <span className="meta-val">{activeItem.period || activeItem.epoch || "Historical Era"}</span>
+              {/* Bottom Keyboard Navigation Bar */}
+              <div className="spotlight-footer">
+                <div className="spotlight-shortcuts">
+                  <div className="shortcut-item">
+                    <span className="kbd-icon">↑</span>
+                    <span className="kbd-icon">↓</span>
+                    <span>Navigate</span>
                   </div>
-                  <div className="meta-field">
-                    <span className="meta-label">Geography</span>
-                    <span className="meta-val">{activeItem.location || "Nigeria"}</span>
+                  <div className="shortcut-item">
+                    <span className="kbd-icon">↵</span>
+                    <span>Open</span>
                   </div>
-                </div>
-
-                <div className="meta-col-right">
-                  <div className="sources-heading">Original material / Sources</div>
-                  <div>
-                    {(activeItem.sources || [
-                      { label: "Historical Records & Archives", link: "#" },
-                      { label: "National Museum Collection", link: "#" }
-                    ]).map((src, sIdx) => {
-                      const hasValidLink = src.link && src.link !== '#' && src.link.startsWith('http');
-                      return (
-                        <a 
-                          key={src.label + sIdx}
-                          className="source-item-row"
-                          href={hasValidLink ? src.link : '#'}
-                          target={hasValidLink ? '_blank' : undefined}
-                          rel={hasValidLink ? 'noopener noreferrer' : undefined}
-                          onClick={!hasValidLink ? (e) => e.preventDefault() : undefined}
-                          style={!hasValidLink ? { cursor: 'default' } : {}}
-                        >
-                          <span className="source-tag">Source</span>
-                          <span className="source-title">{src.label}</span>
-                          <span className="source-arrow">{hasValidLink ? '↗' : '•'}</span>
-                        </a>
-                      );
-                    })}
+                  <div className="shortcut-item">
+                    <span className="kbd-icon">Esc</span>
+                    <span>Close</span>
                   </div>
                 </div>
               </div>
-            </div>
-          </div>
-        </div>
-      )}
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Rich Context Modal Dialog with Expanding Card Grow Effect */}
+      <AnimatePresence>
+        {activeItem && (
+          <motion.div 
+            className="overlay active" 
+            id="overlay"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.22, ease: 'easeOut' }}
+            onClick={(e) => {
+              if (e.target.id === 'overlay') closeModal();
+            }}
+            onTouchMove={(e) => {
+              if (e.target.id === 'overlay') e.preventDefault();
+            }}
+            onWheel={(e) => {
+              if (e.target.id === 'overlay') {
+                e.preventDefault();
+                const container = document.getElementById('modalContainer');
+                if (container) container.scrollTop += e.deltaY;
+              }
+            }}
+          >
+            <motion.div 
+              className="modal" 
+              id="modalContainer" 
+              data-lenis-prevent
+              initial={{ opacity: 0, scale: 0.72, y: 40 }}
+              animate={{ 
+                opacity: 1, 
+                scale: 1, 
+                y: 0,
+                transition: {
+                  type: 'spring',
+                  damping: 26,
+                  stiffness: 280,
+                  mass: 0.9
+                }
+              }}
+              exit={{ 
+                opacity: 0, 
+                scale: 0.82, 
+                y: 24,
+                transition: { duration: 0.18, ease: 'easeIn' }
+              }}
+            >
+              <div className="modal-top">
+                <div className="crumb">{`${activeItem.year} / ${activeItem.title}`}</div>
+                <div className="modal-close" onClick={closeModal}>Close ✕</div>
+              </div>
+
+              <motion.div 
+                className="modal-visual"
+                initial={{ scale: 1.08, opacity: 0.8 }}
+                animate={{ scale: 1, opacity: 1 }}
+                transition={{ duration: 0.45, ease: [0.16, 1, 0.3, 1] }}
+              >
+                <img 
+                  src={activeItem.image} 
+                  alt={activeItem.title}
+                  onError={(e) => {
+                    e.currentTarget.onerror = null;
+                    e.currentTarget.src = activeItem.fallback || '/og-image.jpg';
+                  }}
+                />
+              </motion.div>
+
+              <div className="modal-body">
+                <div className="modal-hero-split">
+                  <div className="modal-hero-left">
+                    <p className="source">{activeItem.source}</p>
+                    <h2>{activeItem.title}</h2>
+                    <p className="tagline">{activeItem.tag}</p>
+                  </div>
+                  <div className="modal-hero-right">
+                    <p className="headline-text">{activeItem.headline || activeItem.blurb}</p>
+                  </div>
+                </div>
+
+                <div className="modal-context-rows">
+                  <div className="modal-context-row">
+                    <div className="label">What happened</div>
+                    <div className="value">{activeItem.whatHappened || activeItem.blurb}</div>
+                  </div>
+                  <div className="modal-context-row">
+                    <div className="label">Why it mattered</div>
+                    <div className="value">{activeItem.whyItMattered || "A transformative milestone that permanently altered the trajectory of the nation."}</div>
+                  </div>
+                  <div className="modal-context-row">
+                    <div className="label">Historical lineage</div>
+                    <div className="value">{activeItem.lineage || `${activeItem.title} → Modern Republic`}</div>
+                  </div>
+                </div>
+
+                <div className="modal-meta-grid">
+                  <div className="meta-col-left">
+                    <div className="meta-field">
+                      <span className="meta-label">Period</span>
+                      <span className="meta-val">{activeItem.period || activeItem.epoch || "Historical Era"}</span>
+                    </div>
+                    <div className="meta-field">
+                      <span className="meta-label">Geography</span>
+                      <span className="meta-val">{activeItem.location || "Nigeria"}</span>
+                    </div>
+                  </div>
+
+                  <div className="meta-col-right">
+                    <div className="sources-heading">Original material / Sources</div>
+                    <div>
+                      {(activeItem.sources || [
+                        { label: "Historical Records & Archives", link: "#" },
+                        { label: "National Museum Collection", link: "#" }
+                      ]).map((src, sIdx) => {
+                        const hasValidLink = src.link && src.link !== '#' && src.link.startsWith('http');
+                        return (
+                          <a 
+                            key={src.label + sIdx}
+                            className="source-item-row"
+                            href={hasValidLink ? src.link : '#'}
+                            target={hasValidLink ? '_blank' : undefined}
+                            rel={hasValidLink ? 'noopener noreferrer' : undefined}
+                            onClick={!hasValidLink ? (e) => e.preventDefault() : undefined}
+                            style={!hasValidLink ? { cursor: 'default' } : {}}
+                          >
+                            <span className="source-tag">Source</span>
+                            <span className="source-title">{src.label}</span>
+                            <span className="source-arrow">{hasValidLink ? '↗' : '•'}</span>
+                          </a>
+                        );
+                      })}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </>
   );
 }
