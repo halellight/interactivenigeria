@@ -9,6 +9,7 @@
     "start": "next start"
   },
   "dependencies": {
+    "@vercel/analytics": "^2.0.1",
     "framer-motion": "^13.1.1",
     "lenis": "^1.1.18",
     "next": "^14.2.5",

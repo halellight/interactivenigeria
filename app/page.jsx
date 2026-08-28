@@ -83,7 +83,7 @@ export default function HomePage() {
         index,
         left: SIDE_PAD + index * SPACING,
         above: index % 2 === 0,
-        stemLen: 58 + (index % 2) * 16,
+        stemLen: 42 + (index % 2) * 14,
         searchCorpus,
         popularRank
       };
@@ -147,31 +147,6 @@ export default function HomePage() {
     };
   }, []);
 
-  // Device Orientation Gyroscope tracking for mobile 3D tilt
-  const orientationRef = useRef({ beta: 0, gamma: 0, active: false });
-  const tiltAnimRef = useRef({ rotX: 0, rotY: 0 });
-
-  useEffect(() => {
-    const handleOrientation = (e) => {
-      if (e.beta === null || e.gamma === null) return;
-      // gamma is left-to-right tilt [-90, 90]
-      // beta is front-to-back tilt [-180, 180], baseline holding angle ~45deg
-      const gamma = Math.max(-20, Math.min(20, e.gamma));
-      const beta = Math.max(-20, Math.min(20, e.beta - 45));
-      orientationRef.current = { beta, gamma, active: true };
-    };
-
-    if (typeof window !== 'undefined' && 'DeviceOrientationEvent' in window) {
-      window.addEventListener('deviceorientation', handleOrientation, { passive: true });
-    }
-
-    return () => {
-      if (typeof window !== 'undefined' && 'DeviceOrientationEvent' in window) {
-        window.removeEventListener('deviceorientation', handleOrientation);
-      }
-    };
-  }, []);
-
   // Animation & Scroll Loop
   useEffect(() => {
     let currentX = 0;
@@ -187,7 +162,8 @@ export default function HomePage() {
     const updateLoop = () => {
       if (collectionTrackRef.current && timelineProgressRef.current && timelineInnerRef.current) {
         const rect = collectionTrackRef.current.getBoundingClientRect();
-        const trackHeight = collectionTrackRef.current.offsetHeight - window.innerHeight;
+        const viewportH = window.innerHeight || document.documentElement.clientHeight;
+        const trackHeight = collectionTrackRef.current.offsetHeight - viewportH;
 
         if (trackHeight > 0) {
           const scrollProgress = Math.min(1, Math.max(0, -rect.top / trackHeight));
@@ -214,14 +190,6 @@ export default function HomePage() {
         let closestIdx = -1;
         let minDistance = Infinity;
 
-        // Smooth mobile tilt interpolation
-        if (orientationRef.current.active) {
-          const targetRotX = orientationRef.current.beta * 0.35;
-          const targetRotY = orientationRef.current.gamma * 0.45;
-          tiltAnimRef.current.rotX += (targetRotX - tiltAnimRef.current.rotX) * 0.08;
-          tiltAnimRef.current.rotY += (targetRotY - tiltAnimRef.current.rotY) * 0.08;
-        }
-
         cardElementsRef.current.forEach((el, idx) => {
           if (!el || !el.card || !el.stem || !el.yeartag) return;
           const { left, above } = indexedData[idx];
@@ -238,25 +206,20 @@ export default function HomePage() {
           const visibility = smoothstep(0, 1, Math.min(entryProgress, exitProgress));
 
           if (visibility > 0.01) {
-            const transY = above ? (1 - visibility) * 48 : (1 - visibility) * -48;
-            const scale = 0.76 + (visibility * 0.24);
-            const rot = above ? (-3 + visibility * 2) : (3 - visibility * 2);
+            const transY = above ? (1 - visibility) * 20 : (1 - visibility) * -20;
+            const scale = 0.84 + (visibility * 0.16);
+            const rot = above ? (-1.5 + visibility * 1) : (1.5 - visibility * 1);
 
             el.card.style.opacity = visibility.toFixed(3);
 
-            if (!el.card.matches(':hover')) {
-              if (isMobile && idx === closestIdx && orientationRef.current.active) {
-                const mobRotX = tiltAnimRef.current.rotX;
-                const mobRotY = tiltAnimRef.current.rotY;
-                el.card.style.transform = `translateX(-50%) translateY(${transY.toFixed(1)}px) perspective(600px) rotateX(${mobRotX.toFixed(2)}deg) rotateY(${mobRotY.toFixed(2)}deg) scale(${scale.toFixed(3)}) rotate(${rot.toFixed(1)}deg)`;
-              } else {
-                el.card.style.transform = `translateX(-50%) translateY(${transY.toFixed(1)}px) scale(${scale.toFixed(3)}) rotate(${rot.toFixed(1)}deg)`;
-              }
+            const isHovering = !isMobile && el.card.matches && el.card.matches(':hover');
+            if (!isHovering) {
+              el.card.style.transform = `translateX(-50%) translateY(${transY.toFixed(1)}px) scale(${scale.toFixed(3)}) rotate(${rot.toFixed(1)}deg)`;
             }
 
             el.stem.style.transform = `scaleY(${visibility.toFixed(3)})`;
             el.yeartag.style.opacity = (visibility * 0.95).toFixed(3);
-            el.yeartag.style.transform = `translateX(-50%) translateY(${((1 - visibility) * (above ? 16 : -16)).toFixed(1)}px)`;
+            el.yeartag.style.transform = `translateX(-50%) translateY(${((1 - visibility) * (above ? 10 : -10)).toFixed(1)}px)`;
           } else {
             el.card.style.opacity = '0';
             el.stem.style.transform = 'scaleY(0)';
@@ -581,7 +544,10 @@ export default function HomePage() {
                   >
                     <div 
                       className={`yeartag ${item.above ? 'yeartag-bottom' : 'yeartag-top'}`}
-                      style={{ top: item.above ? '64px' : '-142px' }}
+                      style={{ 
+                        top: item.above ? '44px' : 'auto',
+                        bottom: item.above ? 'auto' : '44px'
+                      }}
                       ref={(el) => {
                         if (!cardElementsRef.current[i]) cardElementsRef.current[i] = {};
                         cardElementsRef.current[i].yeartag = el;
@@ -593,7 +559,11 @@ export default function HomePage() {
 
                     <div 
                       className={`stem ${item.above ? 'stem-above' : 'stem-below'}`}
-                      style={{ height: `${item.stemLen}px`, top: item.above ? `${-item.stemLen}px` : '0px' }}
+                      style={{ 
+                        height: `${item.stemLen}px`, 
+                        top: item.above ? 'auto' : '0px',
+                        bottom: item.above ? '0px' : 'auto'
+                      }}
                       ref={(el) => {
                         if (!cardElementsRef.current[i]) cardElementsRef.current[i] = {};
                         cardElementsRef.current[i].stem = el;
@@ -604,21 +574,26 @@ export default function HomePage() {
 
                     <div 
                       className={`card ${item.above ? 'above' : 'below'}`}
-                      style={{ top: item.above ? `${-(item.stemLen + 246)}px` : `${item.stemLen}px` }}
+                      style={{ 
+                        bottom: item.above ? `${item.stemLen}px` : 'auto',
+                        top: item.above ? 'auto' : `${item.stemLen}px`
+                      }}
                       onClick={(e) => {
                         e.stopPropagation();
                         openModal(i);
                       }}
                       onMouseMove={(e) => {
+                        if (typeof window !== 'undefined' && window.matchMedia && window.matchMedia('(pointer: coarse)').matches) return;
                         const rect = e.currentTarget.getBoundingClientRect();
                         const x = e.clientX - rect.left - rect.width / 2;
                         const y = e.clientY - rect.top - rect.height / 2;
-                        const rotX = -(y / (rect.height / 2)) * 7;
-                        const rotY = (x / (rect.width / 2)) * 7;
-                        e.currentTarget.style.transform = `translateX(-50%) translateY(-6px) perspective(600px) rotateX(${rotX.toFixed(2)}deg) rotateY(${rotY.toFixed(2)}deg) scale(1.03)`;
+                        const rotX = -(y / (rect.height / 2)) * 6;
+                        const rotY = (x / (rect.width / 2)) * 6;
+                        e.currentTarget.style.transform = `translateX(-50%) translateY(-4px) perspective(600px) rotateX(${rotX.toFixed(2)}deg) rotateY(${rotY.toFixed(2)}deg) scale(1.02)`;
                       }}
                       onMouseDown={(e) => {
-                        e.currentTarget.style.transform = `translateX(-50%) translateY(-2px) scale(0.97)`;
+                        if (typeof window !== 'undefined' && window.matchMedia && window.matchMedia('(pointer: coarse)').matches) return;
+                        e.currentTarget.style.transform = `translateX(-50%) translateY(-2px) scale(0.98)`;
                       }}
                       onMouseUp={(e) => {
                         e.currentTarget.style.transform = '';
