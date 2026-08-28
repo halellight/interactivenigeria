@@ -31,7 +31,7 @@ export const metadata = {
     card: 'summary_large_image',
     title: 'The Nigeria History Museum',
     description: 'A visual history of the kingdoms, uprisings, and inventions that made a nation.',
-    creator: '@__Halel',
+    creator: '@_Halel',
     images: ['/og-image.jpg']
   }
 };

@@ -516,15 +516,29 @@ body {
 
 .card .card-header {
   display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
+  flex-direction: column;
   margin-bottom: 8px;
+  width: 100%;
 }
 
 .card .card-title-group {
   display: flex;
   flex-direction: column;
-  max-width: 190px;
+  width: 100%;
+}
+
+.card .card-top-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 4px;
+}
+
+.card .catalog-num {
+  font-size: 0.64rem;
+  font-weight: 600;
+  color: var(--red);
+  letter-spacing: 0.04em;
 }
 
 .card .card-title-group strong {

@@ -147,6 +147,31 @@ export default function HomePage() {
     };
   }, []);
 
+  // Device Orientation Gyroscope tracking for mobile 3D tilt
+  const orientationRef = useRef({ beta: 0, gamma: 0, active: false });
+  const tiltAnimRef = useRef({ rotX: 0, rotY: 0 });
+
+  useEffect(() => {
+    const handleOrientation = (e) => {
+      if (e.beta === null || e.gamma === null) return;
+      // gamma is left-to-right tilt [-90, 90]
+      // beta is front-to-back tilt [-180, 180], baseline holding angle ~45deg
+      const gamma = Math.max(-20, Math.min(20, e.gamma));
+      const beta = Math.max(-20, Math.min(20, e.beta - 45));
+      orientationRef.current = { beta, gamma, active: true };
+    };
+
+    if (typeof window !== 'undefined' && 'DeviceOrientationEvent' in window) {
+      window.addEventListener('deviceorientation', handleOrientation, { passive: true });
+    }
+
+    return () => {
+      if (typeof window !== 'undefined' && 'DeviceOrientationEvent' in window) {
+        window.removeEventListener('deviceorientation', handleOrientation);
+      }
+    };
+  }, []);
+
   // Animation & Scroll Loop
   useEffect(() => {
     let currentX = 0;
@@ -189,6 +214,14 @@ export default function HomePage() {
         let closestIdx = -1;
         let minDistance = Infinity;
 
+        // Smooth mobile tilt interpolation
+        if (orientationRef.current.active) {
+          const targetRotX = orientationRef.current.beta * 0.35;
+          const targetRotY = orientationRef.current.gamma * 0.45;
+          tiltAnimRef.current.rotX += (targetRotX - tiltAnimRef.current.rotX) * 0.08;
+          tiltAnimRef.current.rotY += (targetRotY - tiltAnimRef.current.rotY) * 0.08;
+        }
+
         cardElementsRef.current.forEach((el, idx) => {
           if (!el || !el.card || !el.stem || !el.yeartag) return;
           const { left, above } = indexedData[idx];
@@ -210,8 +243,15 @@ export default function HomePage() {
             const rot = above ? (-3 + visibility * 2) : (3 - visibility * 2);
 
             el.card.style.opacity = visibility.toFixed(3);
+
             if (!el.card.matches(':hover')) {
-              el.card.style.transform = `translateX(-50%) translateY(${transY.toFixed(1)}px) scale(${scale.toFixed(3)}) rotate(${rot.toFixed(1)}deg)`;
+              if (isMobile && idx === closestIdx && orientationRef.current.active) {
+                const mobRotX = tiltAnimRef.current.rotX;
+                const mobRotY = tiltAnimRef.current.rotY;
+                el.card.style.transform = `translateX(-50%) translateY(${transY.toFixed(1)}px) perspective(600px) rotateX(${mobRotX.toFixed(2)}deg) rotateY(${mobRotY.toFixed(2)}deg) scale(${scale.toFixed(3)}) rotate(${rot.toFixed(1)}deg)`;
+              } else {
+                el.card.style.transform = `translateX(-50%) translateY(${transY.toFixed(1)}px) scale(${scale.toFixed(3)}) rotate(${rot.toFixed(1)}deg)`;
+              }
             }
 
             el.stem.style.transform = `scaleY(${visibility.toFixed(3)})`;
@@ -593,10 +633,13 @@ export default function HomePage() {
                     >
                       <div className="card-header">
                         <div className="card-title-group">
+                          <div className="card-top-row">
+                            <span className="catalog-num mono">№ {String(i + 1).padStart(2, '0')}</span>
+                            <div className="datechip mono">{item.year}</div>
+                          </div>
                           <strong>{item.title}</strong>
                           <small>{item.tag}</small>
                         </div>
-                        <div className="datechip mono">{item.year}</div>
                       </div>
                       <div className="visual">
                         <img 
@@ -624,7 +667,7 @@ export default function HomePage() {
           An independent visual archive. Not affiliated with the Federal Government of Nigeria.
         </div>
         <div className="attribution">
-          Built by <a href="https://x.com/__Halel" target="_blank" rel="noopener noreferrer" className="author-link"><strong>Praise Ibe</strong></a><br />
+          Curated & Built by <a href="https://x.com/_Halel" target="_blank" rel="noopener noreferrer" className="author-link"><strong>Praise Ibe</strong></a><br />
           © 2026
         </div>
       </footer>
